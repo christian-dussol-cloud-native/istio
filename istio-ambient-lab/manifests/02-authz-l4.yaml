@@ -1,0 +1,17 @@
+# Carousel slide 8, verbatim. L4 policy (principals only), enforced by the
+# destination ztunnel while no waypoint is in the path.
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: service-b-allow-a
+  namespace: trading
+spec:
+  selector:
+    matchLabels:
+      app: service-b
+  action: ALLOW
+  rules:
+  - from:
+    - source:
+        principals:
+        - cluster.local/ns/trading/sa/service-a

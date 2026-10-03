@@ -1,0 +1,18 @@
+# Enforced by ztunnel: service-b pods only accept in-mesh traffic that
+# comes from the waypoint. Closes the "call the pod IP directly" bypass.
+# Check the waypoint ServiceAccount name first (see README, step 6.4).
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: service-b-only-from-waypoint
+  namespace: trading
+spec:
+  selector:
+    matchLabels:
+      app: service-b
+  action: ALLOW
+  rules:
+  - from:
+    - source:
+        principals:
+        - cluster.local/ns/trading/sa/waypoint

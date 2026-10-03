@@ -1,0 +1,9 @@
+# Carousel slide 7. Mesh-wide because istio-system is the default root namespace.
+apiVersion: security.istio.io/v1
+kind: PeerAuthentication
+metadata:
+  name: default
+  namespace: istio-system  # root ns = mesh-wide
+spec:
+  mtls:
+    mode: STRICT

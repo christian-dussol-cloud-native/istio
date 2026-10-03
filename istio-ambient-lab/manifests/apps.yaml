@@ -1,0 +1,198 @@
+# Workloads for namespace trading. Names match the carousel.
+# Allowed caller. Identity: cluster.local/ns/trading/sa/service-a
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: service-a
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: service-a
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: service-a
+  template:
+    metadata:
+      labels:
+        app: service-a
+    spec:
+      terminationGracePeriodSeconds: 0
+      serviceAccountName: service-a
+      containers:
+      - name: curl
+        image: docker.io/curlimages/curl:8.16.0
+        command: ["/bin/sleep", "infinity"]
+        imagePullPolicy: IfNotPresent
+---
+# Unauthorized caller. Identity: cluster.local/ns/trading/sa/service-c
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: service-c
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: service-c
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: service-c
+  template:
+    metadata:
+      labels:
+        app: service-c
+    spec:
+      terminationGracePeriodSeconds: 0
+      serviceAccountName: service-c
+      containers:
+      - name: curl
+        image: docker.io/curlimages/curl:8.16.0
+        command: ["/bin/sleep", "infinity"]
+        imagePullPolicy: IfNotPresent
+---
+# service-b: two versions of go-httpbin behind one Service, plus one Service
+# per version (Gateway API splits traffic across Services).
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: service-b
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: service-b
+spec:
+  ports:
+  - name: http
+    port: 8080
+    targetPort: 8080
+  selector:
+    app: service-b
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: service-b-v1
+spec:
+  ports:
+  - name: http
+    port: 8080
+    targetPort: 8080
+  selector:
+    app: service-b
+    version: v1
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: service-b-v2
+spec:
+  ports:
+  - name: http
+    port: 8080
+    targetPort: 8080
+  selector:
+    app: service-b
+    version: v2
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: service-b-v1
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: service-b
+      version: v1
+  template:
+    metadata:
+      labels:
+        app: service-b
+        version: v1
+    spec:
+      serviceAccountName: service-b
+      containers:
+      - name: httpbin
+        image: docker.io/mccutchen/go-httpbin:v2.15.0
+        imagePullPolicy: IfNotPresent
+        env:
+        - name: USE_REAL_HOSTNAME   # /hostname returns the pod name
+          value: "true"
+        ports:
+        - containerPort: 8080
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: service-b-v2
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: service-b
+      version: v2
+  template:
+    metadata:
+      labels:
+        app: service-b
+        version: v2
+    spec:
+      serviceAccountName: service-b
+      containers:
+      - name: httpbin
+        image: docker.io/mccutchen/go-httpbin:v2.15.0
+        imagePullPolicy: IfNotPresent
+        env:
+        - name: USE_REAL_HOSTNAME   # /hostname returns the pod name
+          value: "true"
+        ports:
+        - containerPort: 8080
+---
+# legacy-pricing: the code you don't own (slide 10). Nothing is instrumented.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: legacy-pricing
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: legacy-pricing
+spec:
+  ports:
+  - name: http
+    port: 8080
+    targetPort: 8080
+  selector:
+    app: legacy-pricing
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: legacy-pricing
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: legacy-pricing
+  template:
+    metadata:
+      labels:
+        app: legacy-pricing
+    spec:
+      serviceAccountName: legacy-pricing
+      containers:
+      - name: httpbin
+        image: docker.io/mccutchen/go-httpbin:v2.15.0
+        imagePullPolicy: IfNotPresent
+        env:
+        - name: USE_REAL_HOSTNAME   # /hostname returns the pod name
+          value: "true"
+        ports:
+        - containerPort: 8080

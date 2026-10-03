@@ -1,0 +1,19 @@
+# Attached to the waypoint with targetRefs: the waypoint sees the real
+# caller identity, so identity-based policy belongs here once a waypoint
+# is in the path.
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: waypoint-allow-a
+  namespace: trading
+spec:
+  targetRefs:
+  - kind: Gateway
+    group: gateway.networking.k8s.io
+    name: waypoint
+  action: ALLOW
+  rules:
+  - from:
+    - source:
+        principals:
+        - cluster.local/ns/trading/sa/service-a

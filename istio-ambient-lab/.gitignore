@@ -1,0 +1,3 @@
+# Istio release archive, downloaded by the Prerequisites step of the README.
+# It is 105 MB and version-specific: never commit it.
+istio-*/
