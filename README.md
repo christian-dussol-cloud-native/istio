@@ -10,10 +10,6 @@ This repository contains learning materials and educational examples for **Istio
 
 **Educational focus.** Real code and examples.
 
-### [carousel/](./carousel)
-
-Collection of visual presentations (carousels) illustrating Istio concepts.
-
 ### [istio-ambient-lab/](./istio-ambient-lab)
 
 Hands-on lab to run Istio in ambient mode on a local kind cluster, one step per carousel slide, including:
@@ -32,9 +28,6 @@ Modules will be added progressively as part of the CNCF Project Focus series.
 ## Educational Content
 
 This repository provides **learning materials and reference implementations**. Always review and adapt code to your specific requirements before using in production.
-
-### Medium related articles
-
 
 ## License
 

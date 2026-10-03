@@ -6,11 +6,11 @@ Companion lab to **CNCF Project Focus · Episode #6 · Istio**.
 **Versions**: Istio 1.31.1 · Gateway API v1.6.0 (standard channel) · kind v0.31.0 (node image `kindest/node:v1.35.0`) · go-httpbin v2.15.0
 **Verified**: 26 September 2026 · **By**: Christian Dussol
 
-This lab runs the carousel on a local kind cluster, one slide at a time. The names match the carousel (`service-a`, `service-b`, `service-c`, `legacy-pricing`), so **the YAML shown on carousel slides 7, 8 and 9 is applied here as is**, and the PromQL query of carousel slide 10 runs unchanged.
+This lab runs the carousel on a local kind cluster, one slide at a time. The names match the carousel (`service-a`, `service-b`, `service-c`, `legacy-pricing`), so **the YAML shown on carousel slides 8, 9 and 10 is applied here as is**, and the PromQL query of carousel slide 11 runs unchanged.
 
 **The lab deliberately contains a failure.** In step 6, adding a waypoint breaks an authorization policy that was correct moments earlier. This is intentional: the failure shows how the enforcement point, and the identity seen by the destination ztunnel, change when L7 processing enters the path.
 
-The lab uses **ambient mode** (carousel slide 11): no sidecars, one ztunnel per node, and a waypoint only where L7 is needed. Carousel slide 6 shows the other data plane mode, sidecars. The security and routing APIs are the same in both modes, but *where* a policy is enforced changes, and step 6 shows why that matters.
+The lab uses **ambient mode** (carousel slide 12): no sidecars, one ztunnel per node, and a waypoint only where L7 is needed. Carousel slide 7 shows the other data plane mode, sidecars. The security and routing APIs are the same in both modes, but *where* a policy is enforced changes, and step 6 shows why that matters.
 
 ## What you'll get
 
@@ -58,12 +58,12 @@ flowchart TB
 
 | Step | Carousel slide | What you prove | Carousel YAML used as is |
 |---|---|---|---|
-| 2 | 6, 11 | istiod plus one ztunnel per node, no sidecar | |
-| 4 | 7 | `PeerAuthentication` STRICT refuses plaintext | `01-peer-authentication.yaml` |
-| 5 | 8 | Only `service-a` may call `service-b` | `02-authz-l4.yaml` |
-| 6 | 11 | Waypoint for L7, and where identity policy must move | |
-| 7 | 9 | 90/10 split and a 2s timeout on `service-b` | `05-httproute.yaml` |
-| 8 | 10 | 5xx on `legacy-pricing`, by caller, with no code change | The PromQL query |
+| 2 | 7, 12 | istiod plus one ztunnel per node, no sidecar | |
+| 4 | 8 | `PeerAuthentication` STRICT refuses plaintext | `01-peer-authentication.yaml` |
+| 5 | 9 | Only `service-a` may call `service-b` | `02-authz-l4.yaml` |
+| 6 | 12 | Waypoint for L7, and where identity policy must move | |
+| 7 | 10 | 90/10 split and a 2s timeout on `service-b` | `05-httproute.yaml` |
+| 8 | 11 | 5xx on `legacy-pricing`, by caller, with no code change | The PromQL query |
 
 ## Prerequisites
 
@@ -116,7 +116,7 @@ istioctl install --set profile=ambient --skip-confirmation
 kubectl get pods -n istio-system -o wide
 ```
 
-> Expected: `istiod` (the control plane), plus one `istio-cni-node` pod and one `ztunnel` pod **per node**. There is no Envoy sidecar anywhere: this is the ambient data plane of carousel slide 11.
+> Expected: `istiod` (the control plane), plus one `istio-cni-node` pod and one `ztunnel` pod **per node**. There is no Envoy sidecar anywhere: this is the ambient data plane of carousel slide 12.
 
 ## Step 3: Deploy the apps
 
@@ -144,7 +144,7 @@ kubectl exec -n outside deploy/curl -- curl -s http://service-b.trading:8080/hos
 
 > Expected: all three return a JSON body such as `{"hostname":"service-b-v1-..."}` or `service-b-v2-...`. With no policy applied, everything can call everything.
 
-## Step 4: Reject plaintext from outside the mesh (carousel slide 7)
+## Step 4: Reject plaintext from outside the mesh (carousel slide 8)
 
 In ambient mode, traffic between mesh workloads is already mTLS: ztunnel carries it over HBONE. What `PeerAuthentication` controls here is the other door. The default mode is `PERMISSIVE`: plaintext from outside the mesh is still accepted. You saw it at the end of step 3 with the `outside` caller. Switch to `STRICT`:
 
@@ -152,7 +152,7 @@ In ambient mode, traffic between mesh workloads is already mTLS: ztunnel carries
 kubectl apply -f manifests/01-peer-authentication.yaml
 ```
 
-> This is the carousel slide 7 YAML. It is mesh-wide because `istio-system` is Istio's default root namespace.
+> This is the carousel slide 8 YAML. It is mesh-wide because `istio-system` is Istio's default root namespace.
 
 Replay both calls:
 
@@ -177,9 +177,9 @@ kubectl exec -n outside deploy/curl -- curl -sS --max-time 5 http://service-b.tr
 >
 > Exit code 56 is `CURLE_RECV_ERROR`. The destination ztunnel closes the connection: there is no HTTP layer here to return a status.
 
-## Step 5: Only A may call B (carousel slide 8)
+## Step 5: Only A may call B (carousel slide 9)
 
-This is the carousel slide 8 policy. It uses only `principals`, so it is an L4 policy, enforced by the **destination ztunnel**:
+This is the carousel slide 9 policy. It uses only `principals`, so it is an L4 policy, enforced by the **destination ztunnel**:
 
 ```bash
 kubectl apply -f manifests/02-authz-l4.yaml
@@ -207,7 +207,7 @@ kubectl exec -n trading deploy/service-c -- curl -sS --max-time 5 http://service
 >
 > Same error for a different reason: in step 4 the connection was refused for lack of mTLS, here it is refused for lack of an authorized identity. At L4, both look the same to the caller.
 
-## Step 6: Add a waypoint (carousel slide 11)
+## Step 6: Add a waypoint (carousel slide 12)
 
 So far, everything ran at L4. HTTP routing and HTTP request timeouts need L7 processing, so deploy a waypoint for the `trading` namespace:
 
@@ -239,7 +239,7 @@ kubectl exec -n trading deploy/service-a -- curl -s -w "\nHTTP %{http_code}\n" -
 
 ### 6.2 Why
 
-The traffic path is now **service-a → ztunnel → waypoint → ztunnel → service-b**. The destination ztunnel still enforces the carousel slide 8 policy, but the connection it receives now comes from the **waypoint**, with the waypoint's identity, not from `service-a`.
+The traffic path is now **service-a → ztunnel → waypoint → ztunnel → service-b**. The destination ztunnel still enforces the carousel slide 9 policy, but the connection it receives now comes from the **waypoint**, with the waypoint's identity, not from `service-a`.
 
 ```mermaid
 sequenceDiagram
@@ -251,7 +251,7 @@ sequenceDiagram
     A->>Z1: GET /hostname
     Z1->>W: HBONE, peer identity sa/service-a
     W->>Z2: HBONE, peer identity sa/waypoint
-    Note over Z2: carousel slide 8 policy only allows sa/service-a
+    Note over Z2: carousel slide 9 policy only allows sa/service-a
     Z2-xW: denied
     Note over B: never reached
 ```
@@ -340,9 +340,9 @@ flowchart LR
     zt --> b["service-b pods"]
 ```
 
-## Step 7: Route 10% to v2, with a timeout (carousel slide 9)
+## Step 7: Route 10% to v2, with a timeout (carousel slide 10)
 
-Apply the carousel slide 9 `HTTPRoute`. One route carries both the 90/10 split and the 2s timeout:
+Apply the carousel slide 10 `HTTPRoute`. One route carries both the 90/10 split and the 2s timeout:
 
 ```bash
 kubectl apply -n trading -f manifests/05-httproute.yaml
@@ -391,7 +391,7 @@ kubectl exec -n trading deploy/service-a -- curl -s -o /dev/null -w "%{http_code
 >
 > These 504s are the waypoint's, and they are counted as such: step 8 finds them in `istio_requests_total` with `response_flags="UT"`, upstream timeout.
 
-## Step 8: Metrics for code you don't own (carousel slide 10)
+## Step 8: Metrics for code you don't own (carousel slide 11)
 
 `legacy-pricing` contains no OpenTelemetry SDK and no metrics code. Install the Prometheus addon shipped with Istio:
 
@@ -420,7 +420,7 @@ Open a port-forward to Prometheus:
 kubectl -n istio-system port-forward svc/prometheus 9090:9090 &
 ```
 
-The carousel slide 10 query, unchanged: 5xx on `legacy-pricing`, by caller.
+The carousel slide 11 query, unchanged: 5xx on `legacy-pricing`, by caller.
 
 ```bash
 curl -s http://localhost:9090/api/v1/query --data-urlencode \
@@ -503,14 +503,14 @@ You can also browse the same data with `istioctl dashboard prometheus`.
 
 | Topic | Why it's out of scope |
 |---|---|
-| Distributed traces | The proxy can create spans, but joining them end to end requires the app to forward trace headers (carousel slide 10 caveat). |
+| Distributed traces | The proxy can create spans, but joining them end to end requires the app to forward trace headers. |
 | Retries in `HTTPRoute` | Still Experimental in Gateway API (GEP-1731). |
-| Sidecar mode | Same APIs, different data plane. Carousel slide 6 shows it. |
+| Sidecar mode | Same APIs, different data plane. Carousel slide 7 shows it. |
 | Ingress, egress, multi-cluster | Not needed for the carousel's story. |
 
 ## Field notes
 
-- **A waypoint moves the enforcement point.** Step 6.1 is the most instructive failure of the lab. The carousel slide 8 policy is correct in sidecar mode and in ambient mode without a waypoint, but it breaks as soon as a waypoint enters the path, because the destination ztunnel then sees the waypoint's identity.
+- **A waypoint moves the enforcement point.** Step 6.1 is the most instructive failure of the lab. The carousel slide 9 policy is correct in sidecar mode and in ambient mode without a waypoint, but it breaks as soon as a waypoint enters the path, because the destination ztunnel then sees the waypoint's identity.
 - **Two layers, two failure modes.** A denial by ztunnel drops the connection; a denial by the waypoint returns an HTTP 403. The error you get tells you which layer refused you.
 - **Waypoint metrics use `reporter="waypoint"`.** Queries and dashboards written for sidecars filter on `reporter="source"` or `"destination"` and miss this traffic. At the time of writing, an [open Istio issue](https://github.com/istio/istio/issues/61815) tracks updating the service and workload dashboards for this.
 
