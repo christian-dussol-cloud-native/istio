@@ -478,7 +478,7 @@ curl -s http://localhost:9090/api/v1/query --data-urlencode \
 
 ### From metrics to SLIs
 
-The golden signals of `legacy-pricing`, with no code change. The share of successful requests (an availability SLI):
+The golden signals of `legacy-pricing`, with no code change. The share of requests that did not return a 5xx response (an availability SLI):
 
 ```bash
 curl -s http://localhost:9090/api/v1/query --data-urlencode \
@@ -496,6 +496,7 @@ curl -s http://localhost:9090/api/v1/query --data-urlencode \
 
 > Expected: an availability value below 1, since half of the calls in step 8 returned 503, and a latency value in milliseconds. As observed on this run: availability `0.5`, exactly the half of the loop that asked for a 503, and a p99 of `0.6` ms, since `/status/{code}` answers without doing any work. On a real service these two numbers are the availability and latency SLIs you would put behind an SLO, and no line of `legacy-pricing` was touched to get them.
 > Saturation, the fourth golden signal, does not come from the mesh: it needs the CPU, memory and queue metrics of the workload itself.
+> Counting only 5xx as failures is a choice, not a rule: a 403 from an authorization policy may be expected behavior, and the business definition of the SLI decides which codes count.
 
 You can also browse the same data with `istioctl dashboard prometheus`.
 
